@@ -1,5 +1,3 @@
-import os
-
 from simplejson import JSONDecoder
 
 import logging
@@ -9,16 +7,13 @@ from gettext import gettext as _
 import ldap
 
 from plow.errors import DNConflict, DefinitionMissing
-from plow.ldapadaptor import LdapAdaptor, DEBUG2
+from plow.ldapadaptor import DEBUG2
 from plow.utils import (
     smart_str_to_unicode,
     prepare_str_for_ldap,
     modify_modlist,
     dict_diff,
 )
-
-# Constants to get rid of
-ROOT_DN = "base_dn"
 
 
 def load_cfg(fromFile, section):
@@ -271,7 +266,7 @@ class LdapClass(object):
 
     def __init__ (self, la, dn, attributes=None, **kwattrs):
         """Initialize instance."""
-        self._ldap = LdapAdaptor(la)
+        self._ldap = la
         self._dn = dn
         self._attrs = CaseInsensitiveDict()
 
@@ -345,8 +340,7 @@ class LdapClass(object):
         return LdapClass.get(self.parentdn, la=self._ldap)
 
     @classmethod
-    def get_base_dn(cls, l):
-        la = LdapAdaptor(l)
+    def get_base_dn(cls, la):
         # Get the base ou for this class if available, otherwise return the root DN only
         return la.base_dn
 
@@ -529,13 +523,12 @@ class LdapClass(object):
         """
         dn = prepare_str_for_ldap(dn)
         uid = prepare_str_for_ldap(uid)
-        l = LdapAdaptor(la)
         if dn:
             params = {"scope":ldap.SCOPE_BASE, 
                 "filterstr":cls.get_objectClass_filter(),
                 }
             if addbase:
-                base = "{0},{1}".format(dn,cls.get_base_dn(l))
+                base = "{0},{1}".format(dn,cls.get_base_dn(la))
             else:
                 base = dn
         elif uid:
@@ -549,12 +542,12 @@ class LdapClass(object):
                     "uid":uid,
                 }
             }
-            base = cls.get_base_dn(l)
+            base = cls.get_base_dn(la)
         else:
             raise TypeError("You must provide either a uid or dn.")
         #print "Searching", params, "in", base
         try:
-            res = l.search(base, **params)
+            res = la.search(base, **params)
         except ldap.NO_SUCH_OBJECT, e:
             LOG.log(DEBUG2, _("Get failed for '{0}' with error: {1}").format(
                 dn or uid,
@@ -568,7 +561,7 @@ class LdapClass(object):
             #print "get", uid, dn, "result is none; params=", params, 'base=', base
             return None
         if len(res) == 1:
-            return cls(l, res[0][0], res[0][1])
+            return cls(la, res[0][0], res[0][1])
         if len(res) > 1:
             #Should not happen
             raise RuntimeError("More than one %s returned with %s in %s" % (cls.__name__, params["filterstr"], base ))
@@ -582,9 +575,8 @@ class LdapClass(object):
             @return LdapObject
         """
         dn = prepare_str_for_ldap(dn)
-        l = LdapAdaptor(la)
         if addbase:
-            dn = "{0},{1}".format(dn, cls.get_base_dn(l))
+            dn = "{0},{1}".format(dn, cls.get_base_dn(la))
 
         attrs = CaseInsensitiveDict(objectClass=cls.cfg.objectClasses)
         for key, val in attributes.iteritems():
@@ -593,19 +585,19 @@ class LdapClass(object):
 
         addlist = attrs.items()
         try:
-            l.add(dn, addlist)
+            la.add(dn, addlist)
         except ldap.ALREADY_EXISTS:
             raise DNConflict("Add failed: an entry already exists at {0}".format(dn))
         
         # If we are in dry run mode
-        if l.is_dry_run():
+        if la.is_dry_run():
             # We return the same data that the function got
-            return cls(l, dn, attrs)
+            return cls(la, dn, attrs)
         else:
             # Non-dry-run mode.
             # The object attributes may have been changed by the LDAP server.
             # We need to fetch the object anew from the server.
-            return cls.get(dn, la=l)
+            return cls.get(dn, la=la)
 
     @classmethod
     def get_or_create(cls, dn, uid=None, attrs={}, la=None, addbase=False):
@@ -620,14 +612,13 @@ class LdapClass(object):
             LdapObject, False if found
         """
         
-        l = LdapAdaptor(la)
         res = None
         # Always find by dn to check for conflicts
-        by_dn = cls.get(dn=dn, la=l, addbase=addbase)
+        by_dn = cls.get(dn=dn, la=la, addbase=addbase)
 
         if uid:
             # Get by UID
-            res = cls.get(uid=uid, la=l)
+            res = cls.get(uid=uid, la=la)
 
             if by_dn is not None:
                 # We found by uid and by dn, make sure there is no conflict
@@ -649,7 +640,7 @@ class LdapClass(object):
         if res:
             return res, False
         else:
-            return cls.create(dn, attrs, la=l, addbase=addbase), True
+            return cls.create(dn, attrs, la=la, addbase=addbase), True
 
     @classmethod
     def search(cls, base=None, scope=None, filterstr=None, la=None): #left out attrlist, attrsonly
@@ -664,9 +655,8 @@ class LdapClass(object):
 
         @return list of LdapObject instances
         """
-        l = LdapAdaptor(la)
         params = {}
-        base = base or cls.get_base_dn(l)
+        base = base or cls.get_base_dn(la)
         if not scope is None:
             params["scope"] = scope
 
@@ -685,7 +675,7 @@ class LdapClass(object):
             base = base.dn
 
         # The "if res[0]" part avoids returning referals
-        return [cls(l,res[0],res[1]) for res in l.search(base, **params) if res[0]]
+        return [cls(la,res[0],res[1]) for res in la.search(base, **params) if res[0]]
 
 
     def get_diff(self):
