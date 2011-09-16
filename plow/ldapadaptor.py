@@ -297,7 +297,7 @@ class LdapAdaptor(object):
             # Use?
             #filterstr = ldap.filter.escape_filter_chars(filterstr)
             paging_ctrl = PagedCtrl(ldap.LDAP_CONTROL_PAGE_OID,
-                                    True, (page_size, page_cookie))
+                                    False, (page_size, page_cookie))
             query_id = self._ldap.search_ext(base_dn, scope, filterstr, attrs, serverctrls=[paging_ctrl])
             x, res, y, ctrls = self._ldap.result3(query_id)
 
