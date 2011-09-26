@@ -4,7 +4,6 @@ LOG = logging.getLogger(__name__)
 import ldap
 
 from plow.errors import DNConflict
-from plow.ldapadaptor import DEBUG2
 from plow.utils import (
     smart_str_to_unicode,
     prepare_str_for_ldap,
@@ -168,6 +167,7 @@ class MemberView(object):
 
 
 class LdapType(type):
+    ldap_adaptor_hook = None
 
     @classmethod
     def from_config(typ, name, cfg):
@@ -186,6 +186,12 @@ class LdapType(type):
 
         attrs["cfg"] = cfg
         return typ(name, bases, attrs)
+
+    def get_ldap_adapator(cls, la):
+        if cls.ldap_adaptor_hook:
+            return cls.ldap_adaptor_hook(la)
+        else:
+            return la
 
 
 
@@ -327,6 +333,7 @@ class LdapClass(object):
 
     @classmethod
     def get_base_dn(cls, la):
+        la = cls.get_ldap_adapator(la)
         # Get the base ou for this class if available, otherwise return the root DN only
         return la.base_dn
 
@@ -507,6 +514,7 @@ class LdapClass(object):
             You must provide either dn or uid.
             @return LdapObject or None
         """
+        la = cls.get_ldap_adapator(la)
         dn = prepare_str_for_ldap(dn)
         uid = prepare_str_for_ldap(uid)
         if dn:
@@ -535,7 +543,7 @@ class LdapClass(object):
         try:
             res = la.search(base, **params)
         except ldap.NO_SUCH_OBJECT, e:
-            LOG.log(DEBUG2, "Get failed for '{0}' with error: {1}".format(
+            LOG.warn("Get failed for '{0}' with error: {1}".format(
                 dn or uid,
                 unicode(e),
                 ))
@@ -560,6 +568,7 @@ class LdapClass(object):
 
             @return LdapObject
         """
+        la = cls.get_ldap_adapator(la)
         dn = prepare_str_for_ldap(dn)
         if addbase:
             dn = "{0},{1}".format(dn, cls.get_base_dn(la))
@@ -597,6 +606,7 @@ class LdapClass(object):
             LdapObject, True if created
             LdapObject, False if found
         """
+        la = cls.get_ldap_adapator(la)
         
         res = None
         # Always find by dn to check for conflicts
@@ -641,6 +651,7 @@ class LdapClass(object):
 
         @return list of LdapObject instances
         """
+        la = cls.get_ldap_adapator(la)
         params = {}
         base = base or cls.get_base_dn(la)
         if not scope is None:
