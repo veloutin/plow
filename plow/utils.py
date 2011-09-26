@@ -99,11 +99,6 @@ def prepare_str_for_ldap(s):
         "some string \xc3\x83\xc2\xa9\xc3\x83\xc2\xa0\xc3\x83\xc2\xa2!")
     """
     
-    # FIXME: Works for AD, needs testing for OpenLDAP
-
-#    if isinstance(s, str):
-#        s = unicode(s, 'latin1')
-#        s = s.encode('utf-8')
 
     if s is None:
         return s

@@ -4,16 +4,6 @@ from functools import wraps
 import re
 import logging
 LOG = logging.getLogger(__name__)
-try:
-    DEBUG1 = logging._levelNames["DEBUG1"]
-    DEBUG2 = logging._levelNames["DEBUG2"]
-except KeyError:
-    DEBUG1 = 5
-    DEBUG2 = 1
-
-logging.addLevelName(DEBUG1, "DEBUG1")
-logging.addLevelName(DEBUG2, "DEBUG2")
-from gettext import gettext as _
 
 import ldap
 import ldap.filter
@@ -119,8 +109,7 @@ class LdapAdaptor(object):
         ldap.VERSION is 3, but can be changed passing the desired version
         as a parameter.
         """
-        LOG.log(DEBUG2,
-                _("Initializing connection with server %s ...") % server)
+        LOG.info("Initializing connection with server %s ..." % server)
         try:
             ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
             if self._referrals is None:
@@ -132,7 +121,7 @@ class LdapAdaptor(object):
             self._ldap = ldap.initialize (server)
             self.is_connected = True
         except ldap.LDAPError,  e:
-            LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
+            LOG.error("Caught ldap error: %s", str(e))
             raise
         self._ldap.protocol_version = p_version
 
@@ -147,7 +136,7 @@ class LdapAdaptor(object):
         python-ldap API supports both simple and SASL binding methods.
         Return [True, None] or [False, error].
         """
-        LOG.log(DEBUG2, _("Binding to the server with user %s ...") % user_dn)
+        LOG.info("Binding to the server with user %s ..." % user_dn)
 
         if not self.is_connected:
             self.initialize(self._server_url)
@@ -157,7 +146,7 @@ class LdapAdaptor(object):
             return [True, None]
         except ldap.LDAPError, e:
             self.is_connected = False
-            LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
+            LOG.error("Caught ldap error: %s", str(e))
             raise
 
     def unbind (self):
@@ -166,9 +155,9 @@ class LdapAdaptor(object):
         
         Return [True, None] or [False, error].
         """
-        LOG.log(DEBUG2, _("Unbinding from the server"))
+        LOG.info("Unbinding from the server")
         if not self.is_connected:
-            LOG.log(DEBUG2, _("Not Connected"))
+            LOG.debug("Not Connected")
             return
 
         try:
@@ -176,9 +165,9 @@ class LdapAdaptor(object):
             self._ldap = None
             return [True, None]
         except ldap.SERVER_DOWN, e:
-            LOG.log(DEBUG1, _("Caught SERVER_DOWN, ignoring"))
+            LOG.warn("Caught SERVER_DOWN, ignoring")
         except ldap.LDAPError, e:
-            LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
+            LOG.error("Caught ldap error: %s", str(e))
             raise
         finally:
             # we can't rely on this being connected after an error
@@ -198,7 +187,7 @@ class LdapAdaptor(object):
         add_record.
         Return [True, None] or [False, error]..
         """
-        LOG.log(DEBUG2, _("%(dry_run_msg)sAdding %(dn)s:  %(data)s...") % \
+        LOG.debug("%(dry_run_msg)sAdding %(dn)s:  %(data)s..." %
             {"dry_run_msg": self._dry_run_msg(),
              "dn": dn, "data": repr(add_record)})
         if self.is_dry_run():
@@ -208,11 +197,11 @@ class LdapAdaptor(object):
             if result_type == ldap.RES_ADD:
                 return
             else:
-                raise LdapAdaptorError(_(
-                    "add: unexpected result %(type)s : %(result)s"
-                    ) % {"type": str(result_type), "result": result_data})
+                raise LdapAdaptorError(
+                    "add: unexpected result %(type)s : %(result)s" %
+                    {"type": str(result_type), "result": result_data})
         except ldap.ALREADY_EXISTS, e:
-            LOG.log(DEBUG1, _("Record already exists"))
+            LOG.error("Record already exists")
             raise
  
     @check_connected
@@ -222,7 +211,7 @@ class LdapAdaptor(object):
         
         Return [True, None] or [False, error].
         """
-        LOG.log(DEBUG2, _("{dryrunmsg}Deleting {dn}...")
+        LOG.debug("{dryrunmsg}Deleting {dn}..."
                         .format(dryrunmsg = self._dry_run_msg(), dn = dn))
         if self.is_dry_run():
             return [True, None]
@@ -231,11 +220,11 @@ class LdapAdaptor(object):
             if result_type == ldap.RES_DELETE:
                 return [True, None]
             else:
-                raise LdapAdaptorError(_(
-                    "delete : unexpected result %(type)s : %(result)s"
-                    ) % {"type": str(result_type), "result": result_data})
+                raise LdapAdaptorError(
+                    "delete : unexpected result %(type)s : %(result)s" %
+                     {"type": str(result_type), "result": result_data})
         except ldap.LDAPError, e:
-            LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
+            LOG.error("Caught ldap error: %s", str(e))
             raise
 
     @check_connected
@@ -255,7 +244,7 @@ class LdapAdaptor(object):
         mod_attrs.
         Return [True, None] or [False, error].
         """
-        LOG.log(DEBUG2, _("%(dry_run_msg)sModifying %(dn)s: %(attrs)s") %
+        LOG.debug("%(dry_run_msg)sModifying %(dn)s: %(attrs)s" %
             {"dry_run_msg": self._dry_run_msg(),
              "dn": dn, "attrs": str(mod_attrs)})
         if self.is_dry_run():
@@ -265,11 +254,11 @@ class LdapAdaptor(object):
             if result_type == ldap.RES_MODIFY:
                 return [True, None]
             else:
-                raise LdapAdaptorError(_(
-                    "modify: unexpected result %(type)s : %(result)s"
-                ) % {"type": str(result_type), "result": result_data})
+                raise LdapAdaptorError(
+                    "modify: unexpected result %(type)s : %(result)s" %
+                    {"type": str(result_type), "result": result_data})
         except ldap.LDAPError, e:
-            LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
+            LOG.error("Caught ldap error: %s", str(e))
             raise
 
     @check_connected
@@ -279,8 +268,8 @@ class LdapAdaptor(object):
         
         Return [True, None] or [False, error].
         """
-        LOG.log(DEBUG2, _(
-            "%(dry_run)sModifying dn %(dn)s to %(new_dn)s%(newparentdn)s...") %
+        LOG.debug(
+            "%(dry_run)sModifying dn %(dn)s to %(new_dn)s%(newparentdn)s..." %
             {"dry_run": self._dry_run_msg(),
              "dn": dn, "new_dn": new_dn,
              "newparentdn": newparentdn and "," + newparentdn or "" })
@@ -294,11 +283,11 @@ class LdapAdaptor(object):
             if result_type == ldap.RES_MODRDN:
                 return [True, None]
             else:
-                raise LdapAdaptorError(_(
-                    "rename: unexpected result %(type)s : %(result)s"
-                    ) % {"type": str(result_type), "result": result_data})
+                raise LdapAdaptorError(
+                    "rename: unexpected result %(type)s : %(result)s" %
+                    {"type": str(result_type), "result": result_data})
         except ldap.LDAPError, e:
-            LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
+            LOG.error("Caught ldap error: %s", str(e))
             raise
 
     @check_connected
@@ -318,9 +307,9 @@ class LdapAdaptor(object):
         Return list of results
         """
         base_dn = base_dn or self._base_dn
-        LOG.log(DEBUG2, _(
-            "Searching for %(filter)s (%(attrs)s) on %(dn)s ..."
-            ) % {"filter": filterstr, "attrs": attrs, "dn": base_dn})
+        LOG.debug(
+            "Searching for %(filter)s (%(attrs)s) on %(dn)s ..." %
+            {"filter": filterstr, "attrs": attrs, "dn": base_dn})
 
         all_res = []
         page_cookie = ''
@@ -377,9 +366,9 @@ class LdapAdaptor(object):
         the given attribute name, and the given attribute value.
         Return [True, None] or [False (,error)].
         """
-        LOG.log(DEBUG2,_(
+        LOG.debug(
             "Verifying if %(dn)s has attribute %(attr_name)s=%(attr_val)s ..."
-            ) % {"dn": dn, "attr_name": attr_name, "attr_val": attr_value}
+             % {"dn": dn, "attr_name": attr_name, "attr_val": attr_value}
         )
         try:
             if self._ldap.compare_s (dn, attr_name, attr_value):
@@ -387,7 +376,7 @@ class LdapAdaptor(object):
             else:
                 return [False]
         except ldap.LDAPError, e:
-            LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
+            LOG.error("Caught ldap error: %s", str(e))
             raise
 
     def get_error (self, e):

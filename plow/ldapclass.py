@@ -1,6 +1,5 @@
 import logging
 LOG = logging.getLogger(__name__)
-_ = lambda x: x
 
 import ldap
 
@@ -536,7 +535,7 @@ class LdapClass(object):
         try:
             res = la.search(base, **params)
         except ldap.NO_SUCH_OBJECT, e:
-            LOG.log(DEBUG2, _("Get failed for '{0}' with error: {1}").format(
+            LOG.log(DEBUG2, "Get failed for '{0}' with error: {1}".format(
                 dn or uid,
                 unicode(e),
                 ))
@@ -614,9 +613,9 @@ class LdapClass(object):
                 if uid != dn_uid:
                     # If we find something by DN and it has a different uid
                     # it is a conflict
-                    raise DNConflict(_(
-                            "An object with uid {uid} already exists at dn {dn}"
-                        ).format(
+                    raise DNConflict(
+                        "An object with uid {uid} already exists at dn {dn}"
+                        .format(
                             dn=dn,
                             uid=dn_uid,
                         ))
