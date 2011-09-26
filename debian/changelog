@@ -1,5 +1,5 @@
-oaps4 (1.0) lucid; urgency=low
+python-plow (1.0) lucid; urgency=low
 
   * Extraction from OAPS into a separate library
 
- -- Vincent Vinet <vince.vinet@gmail.com>  Mon, 26 Sep 2011 10:05:20 -0400
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Mon, 26 Sep 2011 16:15:27 -0400

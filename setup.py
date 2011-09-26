@@ -17,7 +17,7 @@ setup(
     version=dch_version,
     description="python-ldap object wrapper",
     author="Vincent Vinet",
-    author_email="vince.vinet@gmail.com",
+    author_email="vvinet@revolutionlinux.com",
     url="https://github.com/veloutin/plow",
     license="LGPLv3",
     platforms=["Linux"],

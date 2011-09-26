@@ -1,7 +1,7 @@
 Source: python-plow
 Section: python
 Priority: optional
-Maintainer: Vincent Vinet <vince.vinet@gmail.com>
+Maintainer: Vincent Vinet <vvinet@revolutionlinux.com>
 Build-Depends: debhelper (>= 4.0.0), cdbs, python-support, python
 XS-Python-Version: >= 2.6, << 3.0
 XB-Python-Version: >= 2.6, << 3.0
