@@ -1,3 +1,5 @@
+""" the ldapadaptor module handles low-level LDAP operations """
+
 from functools import wraps
 import re
 import logging
@@ -5,7 +7,7 @@ LOG = logging.getLogger(__name__)
 try:
     DEBUG1 = logging._levelNames["DEBUG1"]
     DEBUG2 = logging._levelNames["DEBUG2"]
-except:
+except KeyError:
     DEBUG1 = 5
     DEBUG2 = 1
 
@@ -21,9 +23,16 @@ from ldap.controls import SimplePagedResultsControl as PagedCtrl
 
 from plow.errors import LdapAdaptorError
 
-RANGED_ATTR=re.compile("(?P<name>.*);range=(?P<start>\d+)-(?P<end>\*|\d+)$")
+RANGED_ATTR = re.compile("(?P<name>.*);range=(?P<start>\d+)-(?P<end>\*|\d+)$")
 
 def get_new_ranges(attrs):
+    """ Returns a list of attributes that need to be fetched to complete
+    the attribute dict `attrs`. Those are all the attributes in the form
+        attrname;range=start-end
+    where end isn't *.
+    The new list will be the following ranges in the format
+        attrname;range=newstart-*
+    """
     extra = [
         m.groupdict()
         for m in
@@ -42,6 +51,7 @@ def get_new_ranges(attrs):
 
 
 def check_connected(f):
+    """ Utility decorator to retry connection on ldap.SERVER_DOWN """
     @wraps(f)
     def _newcall_(self, *args, **kwargs):
         if not self.is_connected:
@@ -70,7 +80,10 @@ class LdapAdaptor(object):
                   case_insensitive_dn=False,
                   dry_run=False,
                  ):
-        """Creates the instance, initializing a connection and binding to the LDAP server."""
+        """
+        Creates the instance, initializing a connection and binding to the LDAP
+        server.
+        """
         self._connected = False
         self._bound = False
         self._ldap = None
@@ -100,13 +113,14 @@ class LdapAdaptor(object):
         """
         Initializes the LDAP system and returns an LDAPObject.
         
-        Uses the initialize() function, which takes a simple LDAP URL (in the format
-        protocol://host:port) as a parameter. A safe connection can be done using
-        an ldaps:// protocol instead of ldap://.
-        Standard ldap.VERSION is 3, but can be changed passing the desired version
+        Uses the initialize() function, which takes a simple LDAP URL (in the
+        format protocol://host:port) as a parameter. A safe connection can be
+        done using an ldaps:// protocol instead of ldap://.  Standard
+        ldap.VERSION is 3, but can be changed passing the desired version
         as a parameter.
         """
-        LOG.log(DEBUG2, _("Initializing connection with server %s ...") % server)
+        LOG.log(DEBUG2,
+                _("Initializing connection with server %s ...") % server)
         try:
             ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
             if self._referrals is None:
@@ -114,16 +128,17 @@ class LdapAdaptor(object):
             else:
                 ldap.set_option(ldap.OPT_REFERRALS, self._referrals)
 
-            # ldap.initialize will only raise an exception with a bad formed URL
-            self._ldap = ldap.initialize (server)  # If we need to restart the connection, self._ldap needs to be instanced again
+            #ldap.initialize will only raise an exception with a bad formed URL
+            self._ldap = ldap.initialize (server)
             self.is_connected = True
         except ldap.LDAPError,  e:
             LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
             raise
         self._ldap.protocol_version = p_version
 
-    # FIXME: the client of the interface doesn't care to bind and unbind : should be managed internaly
-    # If the client code tries to do a client.add() call without a client.bind(), it will fail and it's bad.
+    # FIXME: the client of the interface doesn't care to bind and unbind :
+    # should be managed internaly If the client code tries to do a
+    # client.add() call without a client.bind(), it will fail and it's bad.
     def bind (self, user_dn, user_passwd): 
         """
         Binds to the LDAP directory.
@@ -189,11 +204,13 @@ class LdapAdaptor(object):
         if self.is_dry_run():
             return
         try:
-            result_type, result_data = self._ldap.add_s (dn, add_record)
+            result_type, result_data = self._ldap.add_s(dn, add_record)
             if result_type == ldap.RES_ADD:
                 return
             else:
-                raise LdapAdaptorError(_("add: unexpected result %(type)s : %(result)s") % {"type": str(result_type), "result": result_data})
+                raise LdapAdaptorError(_(
+                    "add: unexpected result %(type)s : %(result)s"
+                    ) % {"type": str(result_type), "result": result_data})
         except ldap.ALREADY_EXISTS, e:
             LOG.log(DEBUG1, _("Record already exists"))
             raise
@@ -205,7 +222,8 @@ class LdapAdaptor(object):
         
         Return [True, None] or [False, error].
         """
-        LOG.log(DEBUG2, _("{dryrunmsg}Deleting {dn}...").format(dryrunmsg = self._dry_run_msg(), dn = dn))
+        LOG.log(DEBUG2, _("{dryrunmsg}Deleting {dn}...")
+                        .format(dryrunmsg = self._dry_run_msg(), dn = dn))
         if self.is_dry_run():
             return [True, None]
         try:
@@ -213,9 +231,9 @@ class LdapAdaptor(object):
             if result_type == ldap.RES_DELETE:
                 return [True, None]
             else:
-                # FIXME : We should unite the exceptions
-                # (wrap LDAPError in an error specific to this library) 
-                raise LdapAdaptorError(_("delete : unexpected result %(type)s : %(result)s") % {"type": str(result_type), "result": result_data})
+                raise LdapAdaptorError(_(
+                    "delete : unexpected result %(type)s : %(result)s"
+                    ) % {"type": str(result_type), "result": result_data})
         except ldap.LDAPError, e:
             LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
             raise
@@ -228,16 +246,16 @@ class LdapAdaptor(object):
         mod_attrs is a list of modification tuples, each composed of three
         elements: the modification type, the attribute name, and the attribute
         value. The modification type cand be one of the followings:
-        - ldap.MOD_ADD : add the value to an attribute, if the schema allows (code 0);
-        - ldap.MOD_DELETE : remove the value from the attribute, if it exists (code 1);
-        - ldap.MODE_REPLACE (the value replaces old values of the attribute (code 2);
+        - ldap.MOD_ADD : add the value to an attribute, if the schema allows
+        - ldap.MOD_DELETE : remove the value from the attribute, if it exists
+        - ldap.MODE_REPLACE (the value replaces old values of the attribute
         - ldap.MOD_INCREMENT (code 3).
         Hint: ldap.modlist's modifyModList() can be used to convert a data
         strucutre in the format of a dictionnary in the format used here by
         mod_attrs.
         Return [True, None] or [False, error].
         """
-        LOG.log(DEBUG2, _("%(dry_run_msg)sModifying %(dn)s: %(attrs)s") % \
+        LOG.log(DEBUG2, _("%(dry_run_msg)sModifying %(dn)s: %(attrs)s") %
             {"dry_run_msg": self._dry_run_msg(),
              "dn": dn, "attrs": str(mod_attrs)})
         if self.is_dry_run():
@@ -247,7 +265,9 @@ class LdapAdaptor(object):
             if result_type == ldap.RES_MODIFY:
                 return [True, None]
             else:
-                raise LdapAdaptorError(_("modify: unexpected result %(type)s : %(result)s") % {"type": str(result_type), "result": result_data})
+                raise LdapAdaptorError(_(
+                    "modify: unexpected result %(type)s : %(result)s"
+                ) % {"type": str(result_type), "result": result_data})
         except ldap.LDAPError, e:
             LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
             raise
@@ -259,24 +279,35 @@ class LdapAdaptor(object):
         
         Return [True, None] or [False, error].
         """
-        LOG.log(DEBUG2, _("%(dry_run_msg)sModifying dn %(dn)s to %(new_dn)s%(newparentdn)s...") % \
-            {"dry_run_msg": self._dry_run_msg(),
+        LOG.log(DEBUG2, _(
+            "%(dry_run)sModifying dn %(dn)s to %(new_dn)s%(newparentdn)s...") %
+            {"dry_run": self._dry_run_msg(),
              "dn": dn, "new_dn": new_dn,
              "newparentdn": newparentdn and "," + newparentdn or "" })
         if self.is_dry_run():
             return [True, None]
         try:
-            result_type, result_data = self._ldap.rename_s (dn, new_dn, newparentdn, delold)
+            result_type, result_data = self._ldap.rename_s(dn,
+                                                           new_dn,
+                                                           newparentdn,
+                                                           delold)
             if result_type == ldap.RES_MODRDN:
                 return [True, None]
             else:
-                raise LdapAdaptorError(_("rename: unexpected result %(type)s : %(result)s") % {"type": str(result_type), "result": result_data})
+                raise LdapAdaptorError(_(
+                    "rename: unexpected result %(type)s : %(result)s"
+                    ) % {"type": str(result_type), "result": result_data})
         except ldap.LDAPError, e:
             LOG.log(DEBUG1, _("Caught ldap error: %s"), str(e))
             raise
 
     @check_connected
-    def search (self, base_dn=None, scope=ldap.SCOPE_SUBTREE, filterstr='(objectClass=*)', attrs=None, page_size=1000):
+    def search (self,
+                base_dn=None,
+                scope=ldap.SCOPE_SUBTREE,
+                filterstr='(objectClass=*)',
+                attrs=None,
+                page_size=1000):
         """
         Search for specific (or not so specific) information in the LDAP server.
         
@@ -287,7 +318,9 @@ class LdapAdaptor(object):
         Return list of results
         """
         base_dn = base_dn or self._base_dn
-        LOG.log(DEBUG2, _("Searching for %(filter)s (%(attrs)s) on %(dn)s ...") % {"filter": filterstr, "attrs": attrs, "dn": base_dn})
+        LOG.log(DEBUG2, _(
+            "Searching for %(filter)s (%(attrs)s) on %(dn)s ..."
+            ) % {"filter": filterstr, "attrs": attrs, "dn": base_dn})
 
         all_res = []
         page_cookie = ''
@@ -298,7 +331,11 @@ class LdapAdaptor(object):
             #filterstr = ldap.filter.escape_filter_chars(filterstr)
             paging_ctrl = PagedCtrl(ldap.LDAP_CONTROL_PAGE_OID,
                                     False, (page_size, page_cookie))
-            query_id = self._ldap.search_ext(base_dn, scope, filterstr, attrs, serverctrls=[paging_ctrl])
+            query_id = self._ldap.search_ext(base_dn,
+                                             scope,
+                                             filterstr,
+                                             attrs,
+                                             serverctrls=[paging_ctrl])
             x, res, y, ctrls = self._ldap.result3(query_id)
 
             for dn, obj_attrs in res:
@@ -308,7 +345,9 @@ class LdapAdaptor(object):
                 # Pesky attributes might be ranges, we need to see about that
                 new_ranges = get_new_ranges(obj_attrs)
                 while new_ranges:
-                    new_res = self._ldap.search_s(dn, ldap.SCOPE_BASE, attrlist=new_ranges)
+                    new_res = self._ldap.search_s(dn,
+                                                  ldap.SCOPE_BASE,
+                                                  attrlist=new_ranges)
                     if len(new_res) != 1 or new_res[0][0] is None:
                         LOG.warn("get extra attr failed for {0}".format(dn))
                         break
@@ -334,11 +373,14 @@ class LdapAdaptor(object):
         """
         Return True if dn has attr_name with attr_value or False otherwise.
         
-        Verify in the directory server if the given DN has an attribute with the given
-        attribute name, and the given attribute value.
+        Verify in the directory server if the given DN has an attribute with
+        the given attribute name, and the given attribute value.
         Return [True, None] or [False (,error)].
         """
-        LOG.log(DEBUG2,_("Verifying if %(dn)s has attribute %(attr_name)s=%(attr_val)s ...") % {"dn": dn, "attr_name": attr_name, "attr_val": attr_value})
+        LOG.log(DEBUG2,_(
+            "Verifying if %(dn)s has attribute %(attr_name)s=%(attr_val)s ..."
+            ) % {"dn": dn, "attr_name": attr_name, "attr_val": attr_value}
+        )
         try:
             if self._ldap.compare_s (dn, attr_name, attr_value):
                 return [True, None]
@@ -380,7 +422,9 @@ class LdapAdaptor(object):
     def normalize_dn(self, dn):
         attr = lambda name:name.lower()
 
-        handle_parts = lambda l: [(attr(a), self.normalize_value(v), t) for a, v, t in l]
+        handle_parts = lambda l: [
+            (attr(a), self.normalize_value(v), t) for a, v, t in l
+        ]
         return ldap.dn.dn2str(
             handle_parts(part) for part in ldap.dn.str2dn(dn)
         )

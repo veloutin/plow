@@ -1,9 +1,9 @@
+""" plow exceptions """
+
+
 class DNConflict(Exception):
-    pass
+    """ Conflict in LDAP tree """
 
 class LdapAdaptorError(Exception):
-    pass
-
-class DefinitionMissing(Exception):
-    """ Class Not Found """
+    """ Base class for LdapAdaptor exceptions """
 

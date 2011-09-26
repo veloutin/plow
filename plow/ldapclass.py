@@ -1,12 +1,10 @@
-from simplejson import JSONDecoder
-
 import logging
 LOG = logging.getLogger(__name__)
-from gettext import gettext as _
+_ = lambda x: x
 
 import ldap
 
-from plow.errors import DNConflict, DefinitionMissing
+from plow.errors import DNConflict
 from plow.ldapadaptor import DEBUG2
 from plow.utils import (
     smart_str_to_unicode,
@@ -14,17 +12,6 @@ from plow.utils import (
     modify_modlist,
     dict_diff,
 )
-
-
-def load_cfg(fromFile, section):
-    cfg_file = file(fromFile, "r")
-    try:
-        cfg_dict = JSONDecoder().decode(cfg_file.read())[section]
-    except KeyError:
-        raise DefinitionMissing("Unable to find definition for {0}".format(section))
-
-    return cfg_dict
-
 
 
 class LdapClassConfig(object):
