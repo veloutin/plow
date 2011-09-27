@@ -1,6 +1,5 @@
 import unittest
 from oaps4.libs.ldap.ldapclass import (
-    LdapClass,
     CaseInsensitiveDict,
     )
 
