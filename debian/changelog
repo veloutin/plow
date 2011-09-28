@@ -1,8 +1,9 @@
 python-plow (1.0.2) lucid; urgency=low
 
   * Fix bad handling of is_dry_run()
+  * Fix tests
 
- -- Vincent Vinet <vvinet@revolutionlinux.com>  Wed, 28 Sep 2011 15:18:25 -0400
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Wed, 28 Sep 2011 15:31:46 -0400
 
 python-plow (1.0) lucid; urgency=low
 

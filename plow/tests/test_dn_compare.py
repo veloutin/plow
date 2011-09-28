@@ -1,15 +1,17 @@
-import sys, os
 import unittest
 
-from oaps4.libs.ldap.ldapadaptor import LdapAdaptor
+from plow.ldapadaptor import LdapAdaptor
 
-LA_CASE = "CASE_SENSITIVE"
-LA_ICASE = "CASE_INSENSITIVE"
+class FakeLA(LdapAdaptor):
+    def bind(self, *args):
+        """ Nothing to see here move along """
+
+    initialize = bind
 
 class Test_Ldap_DN_Compare(unittest.TestCase):
     def setUp(self):
-        self.ldap_case_i = LdapAdaptor(LA_ICASE)
-        self.ldap_case_s = LdapAdaptor(LA_CASE)
+        self.ldap_case_i = FakeLA("uri", "base", case_insensitive_dn=True)
+        self.ldap_case_s = FakeLA("uri", "base")
 
     def _do_compare(self, ref, other, res, case_sensitive=True):
         if case_sensitive:

@@ -1,7 +1,5 @@
 import unittest
-from oaps4.libs.ldap.ldapclass import (
-    CaseInsensitiveDict,
-    )
+from plow.ldapclass import CaseInsensitiveDict
 
 
 class TestAttributeDict(unittest.TestCase):
