@@ -87,7 +87,19 @@ class LdapAdaptor(object):
         # FIXME : Defer initialization until connection is needed
         self.initialize (self._server_url)
         self.bind(self._binduser, self._bindpw)
-        self.is_dry_run = dry_run
+        self._dry_run = dry_run
+
+    def is_dry_run(self):
+        if hasattr(self._dry_run, "__call__"):
+            return self._dry_run()
+        else:
+            return self._dry_run
+
+    def _dry_run_msg(self):
+        if self.is_dry_run():
+            return "DRY-RUN "
+        else:
+            return ""
 
     def __del__(self):
         if self._ldap:
