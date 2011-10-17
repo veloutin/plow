@@ -151,6 +151,7 @@ class MemberView(object):
             curdn = self._map.pop(ndn)
             members = self._obj.get_attr(self._managed_attr, [])
             members.remove(curdn)
+            self._obj.set_attr(self._managed_attr, members)
 
             # If we need to manually unset a reverse relation, do it.
             if self._reverse_relation:
@@ -250,7 +251,14 @@ class CaseInsensitiveDict(dict):
             self[key] = val
 
     def copy(self):
-        return type(self)(self.iteritems())
+        return self._copy(self)
+
+    @classmethod
+    def _copy(cls, obj):
+        return cls(
+            (k, v[:] if hasattr(v, "__getslice__") else v)
+            for (k, v) in obj.iteritems()
+        )
 
 class LdapClass(object):
     __metaclass__ = LdapType
@@ -286,11 +294,6 @@ class LdapClass(object):
                 self._attrs[attrname] = self._attrs[attrname][:]
         
         self._origattrs = self._attrs.copy()
-        # Make sure to copy lists
-        for key, val in self._origattrs.iteritems():
-            if isinstance(val, list):
-                self._origattrs[key] = val[:]
-
 
     @property
     def dn(self):

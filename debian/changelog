@@ -1,3 +1,9 @@
+python-plow (1.0.3) lucid; urgency=low
+
+  * Fix shallow copying of attribute dicts
+
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Mon, 17 Oct 2011 11:06:01 -0400
+
 python-plow (1.0.2) lucid; urgency=low
 
   * Fix bad handling of is_dry_run()

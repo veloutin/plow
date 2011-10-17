@@ -33,3 +33,9 @@ class TestAttributeDict(unittest.TestCase):
         self.assertEquals(d["a"], 2)
 
 
+    def test_copy(self):
+        d = CaseInsensitiveDict(A=[1], B=2)
+        e = d.copy()
+        d['A'].append(2)
+
+        self.assertEquals(e['a'], [1])
