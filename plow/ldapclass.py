@@ -497,7 +497,7 @@ class LdapClass(object):
             new_parentdn = "{0},{1}".format(new_parentdn, self._ldap.base_dn)
 
         #TODO Check the parent object's type? (can it contain this?)
-        self._rename(self.rdn, new_parentdn)
+        self._rename(self._get_rdn(orig=False), new_parentdn)
         
 
     def delete(self):
