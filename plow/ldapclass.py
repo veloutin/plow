@@ -166,6 +166,32 @@ class MemberView(object):
                     # Not in there
                     pass
 
+class LdapAttribute(object):
+    def __init__(self, attribute, multi_valued=False):
+        self.attr = attribute
+        self.single = not multi_valued
+
+    def __get__(self, obj, owner=None):
+        if obj is None:
+            return self
+
+        value = obj.get_attr(self.attr, None)
+        if value is None:
+            return value
+        elif self.single and value:
+            return value[0]
+        else:
+            return value
+
+    def __set__(self, obj, value):
+        if self.single:
+            obj.set_attr(self.attr, [value])
+        else:
+            obj.set_attr(self.attr, value)
+
+    def __delete__(self, obj):
+        obj.del_attr(self.attr)
+
 
 class LdapType(type):
     ldap_adaptor_hook = None
@@ -183,6 +209,11 @@ class LdapType(type):
             if attrcfg.get("relation") == "member":
                 viewcls = MemberView.get_view_class(aname, attrcfg)
                 attrs[aname] = viewcls.get_property()
+            else:
+                attrs[aname] = LdapAttribute(
+                    attribute=attrcfg.get("attribute", aname),
+                    multi_valued=attrcfg.get("multi_valued", False),
+                )
 
 
         attrs["cfg"] = cfg

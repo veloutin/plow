@@ -1,5 +1,6 @@
 import unittest
-from plow.ldapclass import CaseInsensitiveDict
+from plow.ldapclass import LdapType, CaseInsensitiveDict
+from .mocks import LdapAdaptor
 
 
 class TestAttributeDict(unittest.TestCase):
@@ -39,3 +40,27 @@ class TestAttributeDict(unittest.TestCase):
         d['A'].append(2)
 
         self.assertEquals(e['a'], [1])
+
+
+class TestLdapClass(unittest.TestCase):
+    def test_attrs(self):
+        la = LdapAdaptor("ldap://localhost", "dc=example,dc=com")
+        User = LdapType.from_config("User", {
+            "rdn" : "uid",
+            "uid" : "uid",
+            "objectClass" : "inetOrgPerson",
+            "attributes" : {
+                "name" : {
+                    "attribute" : "givenName",
+                },
+                "sn" : {},
+            },
+        })
+
+        u = User(la, "uid=test,dc=example,dc=com", uid="test", givenName="Hello")
+        self.assertEquals(u.name, "Hello")
+        self.assertEquals(u.sn, None)
+        u.set_attr("sn", ["Bye"])
+        self.assertEquals(u.sn, "Bye")
+        u.name = "New Name"
+        self.assertEquals(u.get_attr("givenName"), ["New Name"])
