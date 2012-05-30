@@ -55,5 +55,5 @@ an object wrapper around the python-ldap lib for simpler usage.
         group.members.add(user)
         group.save()
 
-    base = OU.get("ou=People", la=la, addbase=True)
+    base = OU.get("ou=People", la=srv, addbase=True)
     print user in base
