@@ -20,7 +20,11 @@ an object wrapper around the python-ldap lib for simpler usage.
             "rdn" : "uid",
             "uid" : "uid",
             "objectClass" : "inetOrgPerson",
-            "attributes" : {}
+            "attributes" : {
+                "name" : {
+                    "attribute" : "givenName",
+                }
+            }
         })
 
     Group = LdapType.from_config("Group", {
@@ -36,10 +40,20 @@ an object wrapper around the python-ldap lib for simpler usage.
             }
         })
 
+    OU = LdapType.fromConfig("OU", {
+        "rdn" : "ou",
+        "objectClass" : "organizationalUnit",
+        "structural" : True,
+        "attributes" : {},
+    })
+
     user = User.get(uid='veloutin', la=srv)
+    print "What's my name?", user.name
     group = Group.get(uid='employees', la=srv)
 
     if user not in group.members:
         group.members.add(user)
         group.save()
 
+    base = OU.get("ou=People", la=la, addbase=True)
+    print user in base
