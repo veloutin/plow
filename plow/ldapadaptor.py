@@ -1,6 +1,7 @@
 """ the ldapadaptor module handles low-level LDAP operations """
 
 from functools import wraps
+import operator
 import re
 import logging
 LOG = logging.getLogger(__name__)
@@ -12,6 +13,18 @@ import ldap.dn
 from ldap.controls import SimplePagedResultsControl as PagedCtrl
 
 from plow.errors import LdapAdaptorError
+
+try:
+    ldap.CONTROL_PAGEDRESULTS
+    make_page_control = PagedCtrl
+    get_page_control = operator.attrgetter("size", "cookie")
+except AttributeError:
+    # seems like we are in < 2.4 version
+    def PCtrlAdapter(criticality, size, cookie):
+        return PagedCtrl(PagedCtrl.controlType, criticality, (size, cookie))
+
+    make_page_control = PCtrlAdapter
+    get_page_cookie = operator.attrgettr("controlValue")
 
 RANGED_ATTR = re.compile("(?P<name>.*);range=(?P<start>\d+)-(?P<end>\*|\d+)$")
 
@@ -330,8 +343,7 @@ class LdapAdaptor(object):
 
             # Use?
             #filterstr = ldap.filter.escape_filter_chars(filterstr)
-            paging_ctrl = PagedCtrl(ldap.LDAP_CONTROL_PAGE_OID,
-                                    False, (page_size, page_cookie))
+            paging_ctrl = make_page_control(False, page_size, page_cookie)
             query_id = self._ldap.search_ext(base_dn,
                                              scope,
                                              filterstr,
@@ -363,7 +375,7 @@ class LdapAdaptor(object):
             page_cookie = ''
             for ext in ctrls:
                 if isinstance(ext, PagedCtrl):
-                    x, page_cookie = ext.controlValue
+                    x, page_cookie = get_page_control(ext)
             if not page_cookie:
                 break #Paging not supported or end of paging
 
