@@ -241,7 +241,8 @@ class LdapAdaptor(object):
         if self.is_dry_run():
             return [True, None]
         try:
-            result_type, result_data = self._ldap.delete_s (dn)
+            res = self._ldap.delete_s (dn)
+            result_type, result_data = res[0], res[1]
             if result_type == ldap.RES_DELETE:
                 return [True, None]
             else:
@@ -275,7 +276,8 @@ class LdapAdaptor(object):
         if self.is_dry_run():
             return [True, None]
         try:
-            result_type, result_data = self._ldap.modify_s (dn, mod_attrs)
+            res = self._ldap.modify_s (dn, mod_attrs)
+            result_type, result_data = res[0], res[1]
             if result_type == ldap.RES_MODIFY:
                 return [True, None]
             else:
@@ -301,10 +303,11 @@ class LdapAdaptor(object):
         if self.is_dry_run():
             return [True, None]
         try:
-            result_type, result_data = self._ldap.rename_s(dn,
-                                                           new_dn,
-                                                           newparentdn,
-                                                           delold)
+            res = self._ldap.rename_s(dn,
+                                      new_dn,
+                                      newparentdn,
+                                      delold)
+            result_type, result_data = res[0], res[1]
             if result_type == ldap.RES_MODRDN:
                 return [True, None]
             else:
