@@ -24,7 +24,7 @@ except AttributeError:
         return PagedCtrl(PagedCtrl.controlType, criticality, (size, cookie))
 
     make_page_control = PCtrlAdapter
-    get_page_cookie = operator.attrgetter("controlValue")
+    get_page_control = operator.attrgetter("controlValue")
 
 RANGED_ATTR = re.compile("(?P<name>.*);range=(?P<start>\d+)-(?P<end>\*|\d+)$")
 
