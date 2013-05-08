@@ -468,7 +468,7 @@ class LdapClass(object):
 
         #Perform the rename
         try:
-            self._ldap.rename(self.dn, newuid, new_parentdn)
+            self._ldap.rename(self.dn, newuid, new_parentdn, delold=0)
         except ldap.ALREADY_EXISTS:
             raise DNConflict("DNConflict when renaming {0} to {1}".format(
                 self.dn, new_dn))
