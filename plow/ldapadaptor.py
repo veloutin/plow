@@ -326,8 +326,9 @@ class LdapAdaptor(object):
                 attrs=None,
                 page_size=1000):
         """
-        Search for specific (or not so specific) information in the LDAP server.
-        
+        search([base_dn [, scope [, filterstr [, attrs [, page_size]]]]])
+        Search for entries
+
         Scope can be one of the followings:
         - SCOPE_BASE (to search the object itself);
         - SCOPE_ONELEVEL (to search the object's immediate children);

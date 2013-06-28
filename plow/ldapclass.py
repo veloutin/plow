@@ -287,7 +287,7 @@ class CaseInsensitiveDict(dict):
     @classmethod
     def _copy(cls, obj):
         return cls(
-            (k, v[:] if hasattr(v, "__getslice__") else v)
+            (k, v[:] if hasattr(v, "__getitem__") else v)
             for (k, v) in obj.iteritems()
         )
 
@@ -536,13 +536,14 @@ class LdapClass(object):
         return self._ldap.delete(self._dn)[0]
 
     @classmethod
-    def get(cls, dn=None, uid=None, la=None, addbase=False):
+    def get(cls, dn=None, uid=None, la=None, addbase=False, attrs=None):
         """
             Retrieve a LdapObject by dn or uid
             @param dn object's dn
             @param uid object's unique identifier
             @param la LdapAdaptor to use
             @param addbase if True, the base is added to the dn
+            @param attrs list of attributes to fetch
 
 
             You must provide either dn or uid.
@@ -574,6 +575,10 @@ class LdapClass(object):
         else:
             raise TypeError("You must provide either a uid or dn.")
         #print "Searching", params, "in", base
+
+        if attrs is not None:
+            params["attrs"] = attrs
+
         try:
             res = la.search(base, **params)
         except ldap.NO_SUCH_OBJECT, e:
@@ -673,7 +678,7 @@ class LdapClass(object):
             return cls.create(dn, attrs, la=la, addbase=addbase), True
 
     @classmethod
-    def search(cls, base=None, scope=None, filterstr=None, la=None): #left out attrlist, attrsonly
+    def search(cls, base=None, scope=None, filterstr=None, la=None, attrs=None): #left out attrsonly
         """ Search for objects in the server
         @param base Base DN to search in (defaults to the base dn for the class)
         @param scope Search scope. Must be one of ldap.SCOPE_BASE (0), 
@@ -690,6 +695,9 @@ class LdapClass(object):
         base = base or cls.get_base_dn(la)
         if not scope is None:
             params["scope"] = scope
+
+        if attrs:
+            params["attrs"] = attrs
 
         if filterstr:
             if not filterstr.strip().startswith("("):
