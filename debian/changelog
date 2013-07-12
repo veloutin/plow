@@ -1,4 +1,22 @@
-python-plow (1.0.4~ppa1) quantal; urgency=low
+python-plow (1.0.7~ppa1) precise; urgency=low
+
+  * Add extended password operation
+
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Fri, 05 Jul 2013 13:29:14 -0400
+
+python-plow (1.0.6~ppa1) precise; urgency=low
+
+  * Add support for attribute list in get/search
+
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Fri, 28 Jun 2013 13:32:41 -0400
+
+python-plow (1.0.5~ppa1) precise; urgency=low
+
+  * Fix handling of renames when attribute changes
+
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Wed, 08 May 2013 10:39:18 -0400
+
+python-plow (1.0.4~ppa3) precise; urgency=low
 
   * Handle Controls API change in python-ldap 2.4
 

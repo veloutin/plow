@@ -407,6 +407,14 @@ class LdapAdaptor(object):
             LOG.error("Caught ldap error: %s", str(e))
             raise
 
+    @check_connected
+    def passwd(self, dn, newpass, oldpass=None):
+        try:
+            self._ldap.passwd_s(dn, oldpass, newpass)
+        except ldap.LDAPError, e:
+            LOG.error("Caught ldap error: %s", str(e))
+            raise
+
     def get_error (self, e):
         """Try to identify error description from exception and return it."""
         raise DeprecationWarning("get_error is deprecated")
