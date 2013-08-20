@@ -159,7 +159,6 @@ class LdapAdaptor(object):
         
         Once we have an LDAPObject instance, we need to bind to the LDAP server. The
         python-ldap API supports both simple and SASL binding methods.
-        Return [True, None] or [False, error].
         """
         LOG.info("Binding to the server with user %s ..." % user_dn)
 
@@ -168,7 +167,6 @@ class LdapAdaptor(object):
 
         try:
             self._ldap.simple_bind_s (user_dn, user_passwd)
-            return [True, None]
         except ldap.LDAPError, e:
             self.is_connected = False
             LOG.error("Caught ldap error: %s", str(e))
@@ -177,8 +175,6 @@ class LdapAdaptor(object):
     def unbind (self):
         """
         Unbinds and closes the connection to the LDAP server.
-        
-        Return [True, None] or [False, error].
         """
         LOG.info("Unbinding from the server")
         if not self.is_connected:
@@ -188,7 +184,6 @@ class LdapAdaptor(object):
         try:
             self._ldap.unbind()
             self._ldap = None
-            return [True, None]
         except ldap.SERVER_DOWN, e:
             LOG.warn("Caught SERVER_DOWN, ignoring")
         except ldap.LDAPError, e:
@@ -203,14 +198,13 @@ class LdapAdaptor(object):
     def add (self, dn, add_record):
         """
         Perform an add operation.
-        
+
         add_record must be a list of tuples, where the first element of the tuple
         must be an attribute and the second element of the tuple must be the value
         of the attribute, which can be a list or a string.
         Hint: you may use ldap.modlist addModList() function to convert a data
         structure in the format of a dictionnary in the format used here by
         add_record.
-        Return [True, None] or [False, error]..
         """
         LOG.debug("%(dry_run_msg)sAdding %(dn)s:  %(data)s..." %
             {"dry_run_msg": self._dry_run_msg(),
@@ -219,33 +213,27 @@ class LdapAdaptor(object):
             return
         try:
             result_type, result_data = self._ldap.add_s(dn, add_record)
-            if result_type == ldap.RES_ADD:
-                return
-            else:
+            if result_type != ldap.RES_ADD:
                 raise LdapAdaptorError(
                     "add: unexpected result %(type)s : %(result)s" %
                     {"type": str(result_type), "result": result_data})
         except ldap.ALREADY_EXISTS, e:
             LOG.error("Record already exists")
             raise
- 
+
     @check_connected
     def delete (self, dn):
         """
         Delete an ldap entry.
-        
-        Return [True, None] or [False, error].
         """
         LOG.debug("{dryrunmsg}Deleting {dn}..."
                         .format(dryrunmsg = self._dry_run_msg(), dn = dn))
         if self.is_dry_run():
-            return [True, None]
+            return
         try:
             res = self._ldap.delete_s (dn)
             result_type, result_data = res[0], res[1]
-            if result_type == ldap.RES_DELETE:
-                return [True, None]
-            else:
+            if result_type != ldap.RES_DELETE:
                 raise LdapAdaptorError(
                     "delete : unexpected result %(type)s : %(result)s" %
                      {"type": str(result_type), "result": result_data})
@@ -255,32 +243,29 @@ class LdapAdaptor(object):
 
     @check_connected
     def modify (self, dn, mod_attrs):
-        """
-        Modify ldap attribute(s).
-        
-        mod_attrs is a list of modification tuples, each composed of three
-        elements: the modification type, the attribute name, and the attribute
-        value. The modification type cand be one of the followings:
+        """ Modify ldap attributes
+
+        mod_attrs is a list of modification three-tuples
+        (modification type, attribute name, value)
+
+        The modification type can be one of the followings:
         - ldap.MOD_ADD : add the value to an attribute, if the schema allows
         - ldap.MOD_DELETE : remove the value from the attribute, if it exists
-        - ldap.MODE_REPLACE (the value replaces old values of the attribute
+        - ldap.MOD_REPLACE : the value replaces old values of the attribute
         - ldap.MOD_INCREMENT (code 3).
         Hint: ldap.modlist's modifyModList() can be used to convert a data
         strucutre in the format of a dictionnary in the format used here by
         mod_attrs.
-        Return [True, None] or [False, error].
         """
         LOG.debug("%(dry_run_msg)sModifying %(dn)s: %(attrs)s" %
             {"dry_run_msg": self._dry_run_msg(),
              "dn": dn, "attrs": str(mod_attrs)})
         if self.is_dry_run():
-            return [True, None]
+            return
         try:
             res = self._ldap.modify_s (dn, mod_attrs)
             result_type, result_data = res[0], res[1]
-            if result_type == ldap.RES_MODIFY:
-                return [True, None]
-            else:
+            if result_type != ldap.RES_MODIFY:
                 raise LdapAdaptorError(
                     "modify: unexpected result %(type)s : %(result)s" %
                     {"type": str(result_type), "result": result_data})
@@ -292,8 +277,6 @@ class LdapAdaptor(object):
     def rename (self, dn, new_dn, newparentdn=None, delold=1):
         """
         Perform a modify RDN operation.
-        
-        Return [True, None] or [False, error].
         """
         LOG.debug(
             "%(dry_run)sModifying dn %(dn)s to %(new_dn)s%(newparentdn)s..." %
@@ -308,9 +291,7 @@ class LdapAdaptor(object):
                                       newparentdn,
                                       delold)
             result_type, result_data = res[0], res[1]
-            if result_type == ldap.RES_MODRDN:
-                return [True, None]
-            else:
+            if result_type != ldap.RES_MODRDN:
                 raise LdapAdaptorError(
                     "rename: unexpected result %(type)s : %(result)s" %
                     {"type": str(result_type), "result": result_data})
@@ -392,17 +373,13 @@ class LdapAdaptor(object):
         
         Verify in the directory server if the given DN has an attribute with
         the given attribute name, and the given attribute value.
-        Return [True, None] or [False (,error)].
         """
         LOG.debug(
             "Verifying if %(dn)s has attribute %(attr_name)s=%(attr_val)s ..."
              % {"dn": dn, "attr_name": attr_name, "attr_val": attr_value}
         )
         try:
-            if self._ldap.compare_s (dn, attr_name, attr_value):
-                return [True, None]
-            else:
-                return [False]
+            return self._ldap.compare_s (dn, attr_name, attr_value)
         except ldap.LDAPError, e:
             LOG.error("Caught ldap error: %s", str(e))
             raise

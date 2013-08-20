@@ -308,22 +308,20 @@ class LdapClass(object):
                     range_attributes.append((k.split(";range=")[0], v))
                 else:
                     self.set_attr(k, v)
+
         for k, v in kwattrs.iteritems():
             if ";range=" in k:
                 range_attributes.append((k.split(";range=")[0], v))
             else:
                 self.set_attr(k, v)
-            self.set_attr(k, v)
-        
+
         for k, v in range_attributes:
             self.set_attr(k, self.get_attr(k) + v)
 
-        #print "__init__", dn, attributes
-        
         for attrname in self._attrs:
             if isinstance(self._attrs[attrname], list): 
                 self._attrs[attrname] = self._attrs[attrname][:]
-        
+
         self._origattrs = self._attrs.copy()
 
     @property
@@ -337,9 +335,8 @@ class LdapClass(object):
                 )
 
         else:
-            # Check if we have a rdn field
             rdn_field = self._get_rdn_field()
-            return "{0}={1}".format(rdn_field, self.get_attr(rdn_field)[0])
+            return ldap.dn.dn2str([[(rdn_field, self.get_attr(rdn_field)[0], 1)]])
 
     def _get_rdn_field(self):
         rdn_field = self.cfg.rdn or self.cfg.uid
@@ -533,7 +530,7 @@ class LdapClass(object):
 
     def delete(self):
         """ Delete this object from the server """
-        return self._ldap.delete(self._dn)[0]
+        return self._ldap.delete(self._dn)
 
     @classmethod
     def get(cls, dn=None, uid=None, la=None, addbase=False, attrs=None):
