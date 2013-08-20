@@ -1,3 +1,9 @@
+python-plow (1.1~ppa1) precise; urgency=low
+
+  * Add preserve_rdn to LdapClass.save()
+
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Tue, 20 Aug 2013 10:33:28 -0400
+
 python-plow (1.0.7~ppa1) precise; urgency=low
 
   * Add extended password operation
