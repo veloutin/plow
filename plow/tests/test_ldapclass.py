@@ -1,6 +1,6 @@
 import unittest
 from plow.ldapclass import LdapType, CaseInsensitiveDict
-from .mocks import LdapAdaptor
+from .mocks import LdapAdaptor, FakeLDAPSrv
 
 
 class TestAttributeDict(unittest.TestCase):
@@ -43,9 +43,12 @@ class TestAttributeDict(unittest.TestCase):
 
 
 class TestLdapClass(unittest.TestCase):
-    def test_attrs(self):
-        la = LdapAdaptor("ldap://localhost", "dc=example,dc=com")
-        User = LdapType.from_config("User", {
+    def setUp(self):
+        self.la = LdapAdaptor("ldap://localhost", "dc=example,dc=com")
+        self.srv = FakeLDAPSrv()
+        self.la._ldap = self.srv
+
+        self.User = LdapType.from_config("User", {
             "rdn" : "uid",
             "uid" : "uid",
             "objectClass" : "inetOrgPerson",
@@ -57,10 +60,70 @@ class TestLdapClass(unittest.TestCase):
             },
         })
 
-        u = User(la, "uid=test,dc=example,dc=com", uid="test", givenName="Hello")
+    def test_attrs(self):
+        u = self.User(self.la, "uid=test,dc=example,dc=com",
+                      uid="test", givenName="Hello")
         self.assertEquals(u.name, "Hello")
         self.assertEquals(u.sn, None)
         u.set_attr("sn", ["Bye"])
         self.assertEquals(u.sn, "Bye")
         u.name = "New Name"
         self.assertEquals(u.get_attr("givenName"), ["New Name"])
+
+    def test_modify_uid(self):
+        u = self.User(self.la, "uid=test,dc=example,dc=com",
+                      uid="test", givenName="Hello")
+        self.srv.data[u.dn] = u._attrs.copy()
+
+        u.set_attr("uid", "test2")
+        u.save()
+
+        newdat = self.srv.data[u.dn]
+        self.assertEquals(newdat["uid"], ["test2"])
+
+    def test_modify_uid2(self):
+        """Test modification of the uid attr when it is not part of the DN"""
+        u = self.User(self.la, "cn=Test User,dc=example,dc=com",
+                      uid="test", cn="Test User")
+        self.srv.data[u.dn] = u._attrs.copy()
+
+        u.set_attr("uid", "test2")
+        u.save()
+
+        newdat = self.srv.data[u.dn]
+        # Currently we force the rdn
+        self.assertEquals(u.dn, "uid=test2,dc=example,dc=com")
+        self.assertEquals(newdat["uid"], ["test2"])
+        self.assertEquals(newdat["cn"], ["Test User"])
+
+
+    def test_modify_preserve(self):
+        """Test preservation of rdn"""
+        u = self.User(self.la, "cn=Test User,dc=example,dc=com",
+                      uid="test", cn="Test User")
+        self.srv.data[u.dn] = u._attrs.copy()
+
+        dn = u.dn
+        u.set_attr("uid", "test2")
+        u.save(preserve_rdn=True)
+
+        self.assertEquals(dn, u.dn, "DN should not change")
+
+        newdat = self.srv.data[u.dn]
+        self.assertEquals(newdat["uid"], ["test2"])
+
+
+    def test_modify_preserve_partial(self):
+        """Test preservation of multi-part rdn with uid in it"""
+        u = self.User(self.la, "cn=Test User+uid=test,dc=example,dc=com",
+                      uid="test", cn="Test User")
+        self.srv.data[u.dn] = u._attrs.copy()
+
+        u.set_attr("uid", "test2")
+        u.save(preserve_rdn=True)
+
+        self.assertEquals(u.dn, "cn=Test User+uid=test2,dc=example,dc=com")
+
+        newdat = self.srv.data[u.dn]
+        self.assertEquals(newdat["uid"], ["test2"])
+        self.assertEquals(newdat["cn"], ["Test User"])

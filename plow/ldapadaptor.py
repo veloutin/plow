@@ -274,21 +274,21 @@ class LdapAdaptor(object):
             raise
 
     @check_connected
-    def rename (self, dn, new_dn, newparentdn=None, delold=1):
+    def rename (self, dn, newrdn, newsuperior=None, delold=1):
         """
         Perform a modify RDN operation.
         """
         LOG.debug(
-            "%(dry_run)sModifying dn %(dn)s to %(new_dn)s%(newparentdn)s..." %
+            "%(dry_run)sModifying dn %(dn)s to %(newrdn)s%(newsuperior)s..." %
             {"dry_run": self._dry_run_msg(),
-             "dn": dn, "new_dn": new_dn,
-             "newparentdn": newparentdn and "," + newparentdn or "" })
+             "dn": dn, "newrdn": newrdn,
+             "newsuperior": newsuperior and "," + newsuperior or "" })
         if self.is_dry_run():
             return [True, None]
         try:
             res = self._ldap.rename_s(dn,
-                                      new_dn,
-                                      newparentdn,
+                                      newrdn,
+                                      newsuperior,
                                       delold)
             result_type, result_data = res[0], res[1]
             if result_type != ldap.RES_MODRDN:

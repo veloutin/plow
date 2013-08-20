@@ -465,7 +465,7 @@ class LdapClass(object):
 
         #Perform the rename
         try:
-            self._ldap.rename(self.dn, newuid, new_parentdn, delold=0)
+            self._ldap.rename(self.dn, newuid, new_parentdn, delold=1)
         except ldap.ALREADY_EXISTS:
             raise DNConflict("DNConflict when renaming {0} to {1}".format(
                 self.dn, new_dn))
@@ -473,39 +473,62 @@ class LdapClass(object):
         # Assign the new dn
         self._dn = new_dn
 
-    def save(self, atomic=False):
+    def save(self, atomic=False, preserve_rdn=False):
         """ Attempt to save this object to the server.
         Params:
-        - atomic: if supplied and true, force explicit value replacements,
-                  which will fail if the data has changed on the server.
+        - atomic: force explicit attribute value replacements, which will fail
+                  if the data has changed on the server.
+        - preserve_rdn: attempt to keep the rdn format
         """
-        if self._ldap.is_dry_run():
-            #Save the changed attributes as being "clean"
-            self._origattrs = self._attrs.copy()
-            return
-        
-        #Check if uid has changed. If so, rename
         new = self._attrs.copy()
         old = self._origattrs.copy()
-        #Get the field that is used to calculate the RDN
+
+        # Generate new rdn
         rdn_field = self._get_rdn_field()
 
-        #Remove it from the attributes to change, rename will do it instead
-        if new.has_key(rdn_field):
-            del new[rdn_field]
-        if old.has_key(rdn_field):
-            del old[rdn_field]
+        dn_parts = ldap.dn.str2dn(self.dn)
+        cur_rdn = ldap.dn.str2dn(self.dn)[0]
 
-        #If we changed a field that is used in the DN, we need to detect it
-        # and perform a rename
+        new_rdn = []
+        if preserve_rdn:
+            for attr, value, atype in cur_rdn:
+                if not new.get(attr):
+                    continue
 
-        #Generate the full attr=value,attr=value strings for the rdn field
-        olduid = self._get_rdn(orig=True)
-        newuid = self._get_rdn(orig=False)
+                # Make sure the current values are in the "old" values
+                if not value in old.get(attr, []):
+                    old.setdefault(attr, []).append(value)
 
-        #Perform the rename if the value has changed
-        if olduid != newuid:
-            self._rename(newuid)
+                if value in new[attr]:
+                    new_rdn.append((attr, value, atype))
+                else:
+                    new_rdn.append((attr, new[attr][0], atype))
+
+        if not new_rdn:
+            if not new.get(rdn_field):
+                raise Exception("No suitable rdn value")
+            else:
+                new_rdn.append((rdn_field, new[rdn_field][0], 1))
+
+        if cur_rdn != new_rdn:
+            try:
+                self._ldap.rename(self.dn,
+                                  ldap.dn.dn2str([new_rdn]),
+                                  newsuperior=None,
+                                  delold=0)
+            except ldap.ALREADY_EXISTS:
+                raise DNConflict("DNConflict when changing rdn of {0} to {1}"
+                                 .format(self.dn, new_rdn))
+            else:
+                self._dn = ldap.dn.dn2str([new_rdn] + dn_parts[1:])
+
+                # Since rename with delold=0 will modify the object with the
+                # new values, we have to add them to the "old" to prevent a
+                # "double add"
+                for key, val, _ in new_rdn:
+                    attrval = old.setdefault(key, [])
+                    if val not in attrval:
+                        attrval.append(val)
 
         #Update values on the server if we changed other attributes
         if new != old:
