@@ -45,8 +45,7 @@ class TestAttributeDict(unittest.TestCase):
 class TestLdapClass(unittest.TestCase):
     def setUp(self):
         self.la = LdapAdaptor("ldap://localhost", "dc=example,dc=com")
-        self.srv = FakeLDAPSrv()
-        self.la._ldap = self.srv
+        self.srv = self.la._ldap
 
         self.User = LdapType.from_config("User", {
             "rdn" : "uid",
