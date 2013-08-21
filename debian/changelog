@@ -1,3 +1,9 @@
+python-plow (1.1.1~ppa1) precise; urgency=low
+
+  * Fix modlist generation in atomic and non-atomic modes
+
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Wed, 21 Aug 2013 09:07:48 -0400
+
 python-plow (1.1~ppa1) precise; urgency=low
 
   * Add preserve_rdn to LdapClass.save()
