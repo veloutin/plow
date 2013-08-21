@@ -20,7 +20,7 @@ def delete(d, key, val):
 
 def replace(d, key, val):
     log.debug("++ set %s %s %s", d, key, val)
-    d[key] = [val]
+    d[key] = val[:]
 
 OPS = {
     ldap.MOD_ADD : add,

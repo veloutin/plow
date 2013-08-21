@@ -129,11 +129,11 @@ def modify_modlist(old, new, atomic=False):
         mod = [
             (ldap.MOD_DELETE, attrname, value)
             for attrname in (upd | rem)
-            for value in old[attrname]
+            for value in set(old[attrname]) - set(new.get(attrname, []))
         ] + [
             (ldap.MOD_ADD, attrname, value)
             for attrname in (newattrs | upd)
-            for value in new[attrname]
+            for value in set(new[attrname]) - set(old.get(attrname, []))
         ]
     else:
         mod = [
@@ -141,15 +141,9 @@ def modify_modlist(old, new, atomic=False):
             (ldap.MOD_DELETE, attrname, None)
             for attrname in rem
         ] + [
-            # For updates, remove values that are not in the new attrs
-            (ldap.MOD_DELETE, attrname, value)
+            # For updates, replace by new values
+            (ldap.MOD_REPLACE, attrname, new[attrname])
             for attrname in upd
-            for value in set(old[attrname]) - set(new[attrname])
-        ] + [
-            # For updates, add values that weren't in the old attrs
-            (ldap.MOD_ADD, attrname, value)
-            for attrname in upd
-            for value in set(new[attrname]) - set(old[attrname])
         ] + [
             # Add new attribute values
             (ldap.MOD_ADD, attrname, value)
