@@ -260,6 +260,8 @@ class CaseInsensitiveDict(dict):
         key = self.keymapping.get(lower(key), key)
         return dict.__contains__(self, key)
 
+    has_key = __contains__
+
     def get(self, key, *args):
         key = self.keymapping.get(lower(key), key)
         return dict.get(self, key, *args)
