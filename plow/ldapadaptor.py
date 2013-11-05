@@ -82,6 +82,7 @@ class LdapAdaptor(object):
                   referrals=None,
                   case_insensitive_dn=False,
                   dry_run=False,
+                  require_delold=False,
                  ):
         """
         Creates the instance, initializing a connection and binding to the LDAP
@@ -96,6 +97,7 @@ class LdapAdaptor(object):
         self._cert_validation = certificate_validation
         self._case_insensitive_dn = case_insensitive_dn
         self._referrals = referrals
+        self.require_delold = require_delold
 
         # FIXME : Defer initialization until connection is needed
         self.initialize (self._server_url)

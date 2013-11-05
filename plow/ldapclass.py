@@ -184,10 +184,7 @@ class LdapAttribute(object):
             return value
 
     def __set__(self, obj, value):
-        if self.single:
-            obj.set_attr(self.attr, [value])
-        else:
-            obj.set_attr(self.attr, value)
+        obj.set_attr(self.attr, [value])
 
     def __delete__(self, obj):
         obj.del_attr(self.attr)
@@ -513,11 +510,12 @@ class LdapClass(object):
                 new_rdn.append((rdn_field, new[rdn_field][0], 1))
 
         if cur_rdn != new_rdn:
+            delold = int(self._ldap.require_delold)
             try:
                 self._ldap.rename(self.dn,
                                   ldap.dn.dn2str([new_rdn]),
                                   newsuperior=None,
-                                  delold=0)
+                                  delold=delold)
             except ldap.ALREADY_EXISTS:
                 raise DNConflict("DNConflict when changing rdn of {0} to {1}"
                                  .format(self.dn, new_rdn))
@@ -526,11 +524,16 @@ class LdapClass(object):
 
                 # Since rename with delold=0 will modify the object with the
                 # new values, we have to add them to the "old" to prevent a
-                # "double add"
+                # "double add". If delold=1, we remove from old and new to
+                # prevent further changes
                 for key, val, _ in new_rdn:
-                    attrval = old.setdefault(key, [])
-                    if val not in attrval:
-                        attrval.append(val)
+                    if delold:
+                        old.pop(key, None)
+                        new.pop(key, None)
+                    else:
+                        attrval = old.setdefault(key, [])
+                        if val not in attrval:
+                            attrval.append(val)
 
         #Update values on the server if we changed other attributes
         if new != old:

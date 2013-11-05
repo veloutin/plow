@@ -1,3 +1,16 @@
+python-plow (1.2~ppa1) precise; urgency=low
+
+  * Allow an LdapAdaptor to force delold=1 when using rename.
+    Apparently ActiveDirectory doesn't like delold=0 :(
+
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Tue, 05 Nov 2013 14:49:20 -0500
+
+python-plow (1.1.2~ppa1) precise; urgency=low
+
+  * Add missing has_key in CaseInsensitiveDict, fixes has_attr
+
+ -- Vincent Vinet <vvinet@revolutionlinux.com>  Wed, 18 Sep 2013 16:17:34 -0400
+
 python-plow (1.1.1~ppa1) precise; urgency=low
 
   * Fix modlist generation in atomic and non-atomic modes

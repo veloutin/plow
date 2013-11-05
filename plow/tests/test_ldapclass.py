@@ -80,10 +80,36 @@ class TestLdapClass(unittest.TestCase):
         newdat = self.srv.data[u.dn]
         self.assertEquals(newdat["uid"], ["test2"])
 
+    def test_modify_uid_delold(self):
+        u = self.User(self.la, "uid=test,dc=example,dc=com",
+                      uid="test", givenName="Hello", require_delold=True)
+        self.srv.data[u.dn] = u._attrs.copy()
+
+        u.set_attr("uid", "test2")
+        u.save()
+
+        newdat = self.srv.data[u.dn]
+        self.assertEquals(newdat["uid"], ["test2"])
+
     def test_modify_uid2(self):
         """Test modification of the uid attr when it is not part of the DN"""
         u = self.User(self.la, "cn=Test User,dc=example,dc=com",
                       uid="test", cn="Test User")
+        self.srv.data[u.dn] = u._attrs.copy()
+
+        u.set_attr("uid", "test2")
+        u.save()
+
+        newdat = self.srv.data[u.dn]
+        # Currently we force the rdn
+        self.assertEquals(u.dn, "uid=test2,dc=example,dc=com")
+        self.assertEquals(newdat["uid"], ["test2"])
+        self.assertEquals(newdat["cn"], ["Test User"])
+
+    def test_modify_uid2_delold(self):
+        """Test modification of the uid attr when it is not part of the DN"""
+        u = self.User(self.la, "cn=Test User,dc=example,dc=com",
+                      uid="test", cn="Test User", require_delold=True)
         self.srv.data[u.dn] = u._attrs.copy()
 
         u.set_attr("uid", "test2")
