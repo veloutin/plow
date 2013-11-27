@@ -3,7 +3,15 @@
 PLOW stands for python-ldap object wrapper. As the name implies, it provides
 an object wrapper around the python-ldap lib for simpler usage.
 
-Build status: [![Build Status](https://travis-ci.org/veloutin/plow.png)](https://travis-ci.org/veloutin/plow)
+Features:
+ * Results paging
+ * Attribute ranges handled for large attribute lists
+ * Automatic reconnection
+ * Atomic changes (deletes old value explicitely)
+ * Smarter modlist generation than ldap.modlist.modifyModlist. Much more efficient when updating
+   group membership or other attributes that could have large number of values.
+
+[![Build Status](https://travis-ci.org/veloutin/plow.png)](https://travis-ci.org/veloutin/plow)
 
 ## Example Usage ##
 
